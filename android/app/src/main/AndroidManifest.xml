@@ -1,0 +1,128 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <uses-permission android:name="android.permission.BLUETOOTH"/>
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"/>
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"/>
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
+    <uses-permission android:name="android.permission.WRITE_CONTACTS"/>
+
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.DIAL" />
+            <data android:scheme="tel" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.SEND" />
+            <data android:mimeType="*/*" />
+        </intent>
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
+    </queries>
+    <queries>
+       
+         <package android:name="com.soutralyvtc.appclient" /> 
+    </queries>
+
+   <application
+        android:label="Soutraly"
+        android:requestLegacyExternalStorage="true"
+        android:name="${applicationName}"
+        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="false"
+        android:extractNativeLibs="true"
+        android:fullBackupOnly="false">
+
+       <!-- ✅ GOOGLE MAPS API KEY - UNE SEULE -->
+
+
+<!-- DA:AD:5F:89:B0:0E:E0:BA:A6:81:0E:BE:C9:30:69:62:27:05:47:7D -->
+
+       <!-- <meta-data 
+           android:name="com.google.android.geo.API_KEY"
+           android:value="AIzaSyD3YZMcyn_jC-lOMbm49JVRsy1pfpwOWQI"/> -->
+
+       <meta-data 
+           android:name="com.google.android.geo.API_KEY"
+           android:value="AIzaSyD0Mwr6zDc1mZBlKeNRYu1yn-BGnaR2Psw"/>
+       
+       <!-- ✅ GOOGLE PLAY SERVICES VERSION -->
+       <meta-data 
+           android:name="com.google.android.gms.version"
+           android:value="@integer/google_play_services_version" />
+       
+       <!-- ✅ APACHE LEGACY -->
+       <uses-library 
+           android:name="org.apache.http.legacy"
+           android:required="false" />
+       
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+          android:theme="@android:style/Theme.Translucent.NoTitleBar.Fullscreen"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize"
+             android:usesCleartextTraffic="true"
+             
+             >
+            
+            <meta-data
+                android:name="io.flutter.embedding.android.NormalTheme"
+                android:resource="@style/NormalTheme" />
+            
+            <!-- ✅ UN SEUL CHANNEL ID POUR FIREBASE -->
+            <meta-data
+                android:name="com.google.firebase.messaging.default_notification_channel_id"
+                android:value="6amTech" />
+            
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+            
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="drivemond"
+                    android:host="open" />
+            </intent-filter>
+
+                <!-- ✅ AJOUTER : Recevoir un partage de localisation -->
+                    <intent-filter>
+                        <action android:name="android.intent.action.SEND" />
+                        <category android:name="android.intent.category.DEFAULT" />
+                        <data android:mimeType="text/plain" />  <!-- Google Maps partage en text/plain -->
+                    </intent-filter>
+
+                    <!-- ✅ AJOUTER : Recevoir un fichier KML/GPX (optionnel) -->
+                    <intent-filter>
+                        <action android:name="android.intent.action.SEND" />
+                        <category android:name="android.intent.category.DEFAULT" />
+                        <data android:mimeType="application/vnd.google-earth.kml+xml" />
+                    </intent-filter>
+
+
+        </activity>
+        
+        <!-- ✅ FLUTTER EMBEDDING - UNE SEULE FOIS -->
+        <meta-data
+            android:name="flutterEmbedding"
+            android:value="2" />
+       
+    </application>
+</manifest>
+
