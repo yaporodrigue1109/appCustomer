@@ -1,6 +1,7 @@
 
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:get/get.dart';
@@ -58,7 +59,9 @@ class VerificationScreenState extends State<VerificationScreen> {
   }
 
   void _applyOtpCode(String code) {
+    debugPrint('[OTP_TRACE][verify] _applyOtpCode received="$code" mounted=$mounted');
     if (!mounted || code.length != 6) {
+      debugPrint('[OTP_TRACE][verify] ignored: mounted=$mounted length=${code.length}');
       return;
     }
 
@@ -69,7 +72,9 @@ class VerificationScreenState extends State<VerificationScreen> {
     otpCode = code;
     errorText = '';
     Get.find<AuthController>().updateVerificationCode(otpCode);
+    debugPrint('[OTP_TRACE][verify] otp applied to input and controller');
     FocusScope.of(context).unfocus();
+    OtpPushHelper.clearPendingOtp();
 
     setState(() {});
   }

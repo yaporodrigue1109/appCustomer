@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:ride_sharing_user_app/data/api_checker.dart';
 import 'package:ride_sharing_user_app/features/auth/domain/models/sign_up_body.dart';
@@ -182,15 +183,24 @@ class AuthController extends GetxController implements GetxService {
       _isOtpSending = true;
       update();
 
-      String? fcmToken;
-      try {
-        fcmToken = await FirebaseMessaging.instance.getToken();
-      } catch (_) {}
+      debugPrint(
+          '[OTP_TRACE][sendOtp] start platform=${GetPlatform.isIOS ? 'ios' : GetPlatform.isAndroid ? 'android' : 'other'} phone=$phone');
+
+      final String? fcmToken = await _getOtpDeliveryToken();
+      final String maskedToken = fcmToken == null
+          ? 'null'
+          : (fcmToken.length > 18
+              ? '${fcmToken.substring(0, 12)}...${fcmToken.substring(fcmToken.length - 6)}'
+              : fcmToken);
+      debugPrint('[OTP_TRACE][sendOtp] token=$maskedToken');
 
       Response response = await authServiceInterface.sendOtp(
         phone: phone,
         fcmToken: fcmToken,
       );
+
+      debugPrint(
+          '[OTP_TRACE][sendOtp] response status=${response.statusCode} push_sent=${response.body?['content']?['push_sent'] ?? response.body?['data']?['push_sent']} delivery=${response.body?['content']?['delivery_channel'] ?? response.body?['data']?['delivery_channel']} body=${response.body}');
 
       if (response.statusCode == 200 || response.statusCode == 206) {
         // 200 = SMS envoyé, 206 = OTP sauvegardé mais SMS non envoyé
@@ -225,6 +235,79 @@ class AuthController extends GetxController implements GetxService {
       showCustomSnackBar('something_went_wrong'.tr);
       return Response(statusCode: 500, statusText: 'Error: $e');
     }
+  }
+
+  Future<String?> _getOtpDeliveryToken() async {
+    try {
+      debugPrint('[OTP_TRACE][token] _getOtpDeliveryToken start');
+      if (GetPlatform.isIOS) {
+        await FirebaseMessaging.instance
+            .setForegroundNotificationPresentationOptions(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
+
+        final NotificationSettings settings =
+            await FirebaseMessaging.instance.requestPermission(
+          alert: true,
+          announcement: false,
+          badge: true,
+          carPlay: false,
+          criticalAlert: false,
+          provisional: false,
+          sound: true,
+        );
+
+        debugPrint(
+            '[OTP_TRACE][token][ios] permission=${settings.authorizationStatus.name}');
+
+        if (settings.authorizationStatus == AuthorizationStatus.denied) {
+          debugPrint(
+              '[OTP_TRACE][token][ios] permission denied, trying token anyway');
+          return await _waitForFirebaseToken();
+        }
+
+        for (int attempt = 0; attempt < 6; attempt++) {
+          final String? apnsToken =
+              await FirebaseMessaging.instance.getAPNSToken();
+          final String maskedApns = apnsToken == null
+              ? 'null'
+              : (apnsToken.length > 18
+                  ? '${apnsToken.substring(0, 12)}...${apnsToken.substring(apnsToken.length - 6)}'
+                  : apnsToken);
+          debugPrint(
+              '[OTP_TRACE][token][ios] apns_attempt=${attempt + 1} apns=$maskedApns');
+          if (apnsToken != null && apnsToken.isNotEmpty) {
+            break;
+          }
+          await Future.delayed(const Duration(milliseconds: 400));
+        }
+      }
+
+      return await _waitForFirebaseToken();
+    } catch (e) {
+      debugPrint('[OTP_TRACE][token] exception=$e');
+      return null;
+    }
+  }
+
+  Future<String?> _waitForFirebaseToken() async {
+    for (int attempt = 0; attempt < 5; attempt++) {
+      final String? token = await FirebaseMessaging.instance.getToken();
+      final String maskedToken = token == null
+          ? 'null'
+          : (token.length > 18
+              ? '${token.substring(0, 12)}...${token.substring(token.length - 6)}'
+              : token);
+      debugPrint('[OTP_TRACE][token] fcm_attempt=${attempt + 1} token=$maskedToken');
+      if (token != null && token.isNotEmpty) {
+        return token;
+      }
+      await Future.delayed(const Duration(milliseconds: 300));
+    }
+    debugPrint('[OTP_TRACE][token] no fcm token after retries');
+    return null;
   }
 
   /*Future<void> firebaseOtpSend(String phoneNumber,{bool canRoute = true, bool isLogin = true})async {

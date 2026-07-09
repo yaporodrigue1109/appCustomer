@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class OtpPushHelper {
@@ -24,6 +25,7 @@ class OtpPushHelper {
   }
 
   static Future<void> captureRemoteMessage(RemoteMessage message) async {
+    debugPrint('[OTP_TRACE][push] captureRemoteMessage data=${message.data} notification_title=${message.notification?.title} notification_body=${message.notification?.body}');
     final Map<String, dynamic> payload =
         Map<String, dynamic>.from(message.data);
 
@@ -36,17 +38,27 @@ class OtpPushHelper {
   }
 
   static Future<void> captureData(Map<String, dynamic> data) async {
-    if (!isOtpMessage(data)) {
+    debugPrint('[OTP_TRACE][push] captureData start action=${data['action']} type=${data['type']} status=${data['status']} notification_type=${data['notification_type']}');
+    final String rawText =
+        '${data['body']?.toString() ?? ''} ${data['message']?.toString() ?? ''} ${data['title']?.toString() ?? ''}';
+    final bool hasOtpKeyword = rawText.toLowerCase().contains('otp');
+    debugPrint('[OTP_TRACE][push] raw_has_otp_keyword=$hasOtpKeyword raw="$rawText"');
+
+    if (!isOtpMessage(data) && !hasOtpKeyword) {
+      debugPrint('[OTP_TRACE][push] ignored: not an otp message');
       return;
     }
 
     final String otpCode = _extractOtpCode(data);
+    debugPrint('[OTP_TRACE][push] extracted_code="$otpCode" length=${otpCode.length}');
     if (otpCode.length != 6) {
+      debugPrint('[OTP_TRACE][push] ignored: invalid otp length');
       return;
     }
 
     final SharedPreferences preferences = await SharedPreferences.getInstance();
     await preferences.setString(_pendingOtpKey, otpCode);
+    debugPrint('[OTP_TRACE][push] stored pending otp and emitted stream');
     _otpStreamController.add(otpCode);
   }
 

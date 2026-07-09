@@ -115,18 +115,46 @@ class AuthRepository implements AuthRepositoryInterface {
         provisional: false,
         sound: true,
       );
-      if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+      log('[OTP_TRACE][updateToken][ios] permission=${settings.authorizationStatus.name}');
+      if (settings.authorizationStatus == AuthorizationStatus.authorized ||
+          settings.authorizationStatus == AuthorizationStatus.provisional) {
         deviceToken = await _saveDeviceToken();
+        deviceToken ??= await _waitForFirebaseToken();
       }
     } else {
       deviceToken = await _saveDeviceToken();
     }
+
+    final String maskedToken = deviceToken == null
+        ? 'null'
+        : (deviceToken.length > 18
+            ? '${deviceToken.substring(0, 12)}...${deviceToken.substring(deviceToken.length - 6)}'
+            : deviceToken);
+    log('[OTP_TRACE][updateToken] token=$maskedToken');
 
     if (!GetPlatform.isWeb) {
       FirebaseMessaging.instance.subscribeToTopic(AppConstants.topic);
     }
     return await apiClient.postData(AppConstants.fcmTokenUpdate,
         {"_method": "put", "fcm_token": deviceToken});
+  }
+
+  Future<String?> _waitForFirebaseToken() async {
+    for (int attempt = 0; attempt < 5; attempt++) {
+      final String? token = await FirebaseMessaging.instance.getToken();
+      final String maskedToken = token == null
+          ? 'null'
+          : (token.length > 18
+              ? '${token.substring(0, 12)}...${token.substring(token.length - 6)}'
+              : token);
+      log('[OTP_TRACE][updateToken] fcm_attempt=${attempt + 1} token=$maskedToken');
+      if (token != null && token.isNotEmpty) {
+        return token;
+      }
+      await Future.delayed(const Duration(milliseconds: 300));
+    }
+    log('[OTP_TRACE][updateToken] no token after retries');
+    return null;
   }
 
   Future<String?> _saveDeviceToken() async {
